@@ -8,6 +8,9 @@ output
 cache
 nc_workspace
 __pycache__
+env/
+venv/
+.venv/
 
 *.om
 *.log
