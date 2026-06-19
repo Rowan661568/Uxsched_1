@@ -97,6 +97,7 @@ void AsyncXQueue::Suspend(int64_t flags)
     if (!suspended_.compare_exchange_strong(expected, true)) return;
 
     launch_worker_->Pause();
+    kHwQueue->OnXQueueSuspend();
     if (level_ >= kPreemptLevelDeactivate) kHwQueue->Deactivate();
     if (level_ >= kPreemptLevelInterrupt)  kHwQueue->Interrupt();
     if (flags & kQueueSuspendFlagSyncHwQueue) kHwQueue->Synchronize();
@@ -107,6 +108,8 @@ void AsyncXQueue::Resume(int64_t flags)
     // Will not resume if it is not suspended.
     bool expected = true;
     if (!suspended_.compare_exchange_strong(expected, false)) return;
+
+    kHwQueue->BeforeXQueueResume();
 
     if (level_ == kPreemptLevelBlock) {
         // Should not clear the command log because when the XQueue is suspended without

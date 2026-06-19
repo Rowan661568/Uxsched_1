@@ -88,12 +88,12 @@ DEFINE_EXPORT_C_REDIRECT_CALL(Driver::rtQueryEventWaitStatus, aclError, aclrtQue
 DEFINE_EXPORT_C_REDIRECT_CALL(XrtSynchronizeEvent, aclError, aclrtSynchronizeEvent, aclrtEvent, event);
 DEFINE_EXPORT_C_REDIRECT_CALL(Driver::rtSynchronizeEventWithTimeout, aclError, aclrtSynchronizeEventWithTimeout, aclrtEvent, event, int32_t, timeout);
 DEFINE_EXPORT_C_REDIRECT_CALL(Driver::rtEventElapsedTime, aclError, aclrtEventElapsedTime, float *, ms, aclrtEvent, startEvent, aclrtEvent, endEvent);
-DEFINE_EXPORT_C_REDIRECT_CALL(Driver::rtMalloc, aclError, aclrtMalloc, void **, devPtr, size_t, size, aclrtMemMallocPolicy, policy);
-DEFINE_EXPORT_C_REDIRECT_CALL(Driver::rtMallocAlign32, aclError, aclrtMallocAlign32, void **, devPtr, size_t, size, aclrtMemMallocPolicy, policy);
-DEFINE_EXPORT_C_REDIRECT_CALL(Driver::rtMallocCached, aclError, aclrtMallocCached, void **, devPtr, size_t, size, aclrtMemMallocPolicy, policy);
+DEFINE_EXPORT_C_REDIRECT_CALL(XrtMalloc, aclError, aclrtMalloc, void **, devPtr, size_t, size, aclrtMemMallocPolicy, policy);
+DEFINE_EXPORT_C_REDIRECT_CALL(XrtMallocAlign32, aclError, aclrtMallocAlign32, void **, devPtr, size_t, size, aclrtMemMallocPolicy, policy);
+DEFINE_EXPORT_C_REDIRECT_CALL(XrtMallocCached, aclError, aclrtMallocCached, void **, devPtr, size_t, size, aclrtMemMallocPolicy, policy);
 DEFINE_EXPORT_C_REDIRECT_CALL(Driver::rtMemFlush, aclError, aclrtMemFlush, void *, devPtr, size_t, size);
 DEFINE_EXPORT_C_REDIRECT_CALL(Driver::rtMemInvalidate, aclError, aclrtMemInvalidate, void *, devPtr, size_t, size);
-DEFINE_EXPORT_C_REDIRECT_CALL(Driver::rtFree, aclError, aclrtFree, void *, devPtr);
+DEFINE_EXPORT_C_REDIRECT_CALL(XrtFree, aclError, aclrtFree, void *, devPtr);
 DEFINE_EXPORT_C_REDIRECT_CALL(Driver::rtMallocHost, aclError, aclrtMallocHost, void **, hostPtr, size_t, size);
 DEFINE_EXPORT_C_REDIRECT_CALL(Driver::rtFreeHost, aclError, aclrtFreeHost, void *, hostPtr);
 DEFINE_EXPORT_C_REDIRECT_CALL(Driver::rtMemcpy, aclError, aclrtMemcpy, void *, dst, size_t, destMax, const void *, src, size_t, count, aclrtMemcpyKind, kind);

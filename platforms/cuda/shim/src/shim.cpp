@@ -10,6 +10,7 @@
 #include "xsched/cuda/hal/common/levels.h"
 #include "xsched/cuda/hal/level1/cuda_queue.h"
 #include "xsched/cuda/hal/common/cuda_command.h"
+#include "xsched/cuda/hal/common/memory_manager.h"
 
 using namespace xsched::preempt;
 
@@ -34,6 +35,34 @@ void WaitBlockingXQueues()
     });
     XASSERT(res == kXSchedSuccess, "Fail to submit wait all commands");
     for (auto &cmd : wait_cmds) cmd->Wait();
+}
+
+CUresult XMemAllocManaged(CUdeviceptr *dptr, size_t bytesize, unsigned int flags)
+{
+    CUresult ret = Driver::MemAllocManaged(dptr, bytesize, flags);
+    if (ret != CUDA_SUCCESS || dptr == nullptr || *dptr == 0) return ret;
+
+    CUcontext ctx = nullptr;
+    CUdevice dev = CU_DEVICE_INVALID;
+    if (Driver::CtxGetCurrent(&ctx) != CUDA_SUCCESS || ctx == nullptr) return ret;
+    if (Driver::CtxGetDevice(&dev) != CUDA_SUCCESS) return ret;
+
+    CudaMemoryManager::RegisterManagedAllocation(*dptr, bytesize, ctx, dev);
+    return ret;
+}
+
+CUresult XMemFree_v2(CUdeviceptr dptr)
+{
+    CUresult ret = Driver::MemFree_v2(dptr);
+    if (ret == CUDA_SUCCESS) CudaMemoryManager::UnregisterAllocation(dptr);
+    return ret;
+}
+
+CUresult XMemFree(CUdeviceptr_v1 dptr)
+{
+    CUresult ret = Driver::MemFree(dptr);
+    if (ret == CUDA_SUCCESS) CudaMemoryManager::UnregisterAllocation((CUdeviceptr)dptr);
+    return ret;
 }
 
 CUresult XLaunchKernel(CUfunction f,

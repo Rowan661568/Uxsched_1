@@ -38,6 +38,10 @@ aclError XrtSynchronizeStream(aclrtStream stream);
 aclError XrtSynchronizeStreamWithTimeout(aclrtStream stream, int32_t timeout);
 aclError XrtCreateStream(aclrtStream *stream);
 aclError XrtCreateStreamWithConfig(aclrtStream *stream, uint32_t priority, uint32_t flag);
+aclError XrtMalloc(void **devPtr, size_t size, aclrtMemMallocPolicy policy);
+aclError XrtMallocAlign32(void **devPtr, size_t size, aclrtMemMallocPolicy policy);
+aclError XrtMallocCached(void **devPtr, size_t size, aclrtMemMallocPolicy policy);
+aclError XrtFree(void *devPtr);
 
 void XopDestroyAttr(const aclopAttr *attr);
 void XDestroyTensorDesc(const aclTensorDesc *desc);

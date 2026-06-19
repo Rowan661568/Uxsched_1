@@ -6,6 +6,7 @@
 #include "xsched/ascend/shim/shim.h"
 #include "xsched/ascend/hal/acl_queue.h"
 #include "xsched/ascend/hal/acl_command.h"
+#include "xsched/ascend/hal/memory_manager.h"
 
 using namespace xsched::preempt;
 
@@ -117,6 +118,52 @@ aclError XrtCreateStreamWithConfig(aclrtStream *stream, uint32_t priority, uint3
     if (res != ACL_SUCCESS) return res;
     XQueueManager::AutoCreate([&](HwQueueHandle *hwq) { return AclQueueCreate(hwq, *stream); });
     XDEBG("XrtCreateStreamWithConfig(stream: %p, priority: %u, flag: 0x%x)", *stream, priority, flag);
+    return res;
+}
+
+aclError XrtMalloc(void **devPtr, size_t size, aclrtMemMallocPolicy policy)
+{
+    aclError res = Driver::rtMalloc(devPtr, size, policy);
+    if (res != ACL_SUCCESS || devPtr == nullptr || *devPtr == nullptr) return res;
+
+    aclrtContext ctx = nullptr;
+    int32_t dev = 0;
+    if (Driver::rtGetCurrentContext(&ctx) != ACL_SUCCESS || ctx == nullptr) return res;
+    if (Driver::rtGetDevice(&dev) != ACL_SUCCESS) return res;
+    AscendMemoryManager::RegisterDeviceAllocation(*devPtr, size, ctx, dev);
+    return res;
+}
+
+aclError XrtMallocAlign32(void **devPtr, size_t size, aclrtMemMallocPolicy policy)
+{
+    aclError res = Driver::rtMallocAlign32(devPtr, size, policy);
+    if (res != ACL_SUCCESS || devPtr == nullptr || *devPtr == nullptr) return res;
+
+    aclrtContext ctx = nullptr;
+    int32_t dev = 0;
+    if (Driver::rtGetCurrentContext(&ctx) != ACL_SUCCESS || ctx == nullptr) return res;
+    if (Driver::rtGetDevice(&dev) != ACL_SUCCESS) return res;
+    AscendMemoryManager::RegisterDeviceAllocation(*devPtr, size, ctx, dev);
+    return res;
+}
+
+aclError XrtMallocCached(void **devPtr, size_t size, aclrtMemMallocPolicy policy)
+{
+    aclError res = Driver::rtMallocCached(devPtr, size, policy);
+    if (res != ACL_SUCCESS || devPtr == nullptr || *devPtr == nullptr) return res;
+
+    aclrtContext ctx = nullptr;
+    int32_t dev = 0;
+    if (Driver::rtGetCurrentContext(&ctx) != ACL_SUCCESS || ctx == nullptr) return res;
+    if (Driver::rtGetDevice(&dev) != ACL_SUCCESS) return res;
+    AscendMemoryManager::RegisterDeviceAllocation(*devPtr, size, ctx, dev);
+    return res;
+}
+
+aclError XrtFree(void *devPtr)
+{
+    aclError res = Driver::rtFree(devPtr);
+    if (res == ACL_SUCCESS) AscendMemoryManager::UnregisterAllocation(devPtr);
     return res;
 }
 

@@ -1,9 +1,11 @@
 #include "xsched/utils/pci.h"
 #include "xsched/utils/xassert.h"
 #include "xsched/protocol/device.h"
+#include "xsched/preempt/xqueue/xqueue.h"
 #include "xsched/cuda/hal/common/levels.h"
 #include "xsched/cuda/hal/level1/cuda_queue.h"
 #include "xsched/cuda/hal/common/cuda_assert.h"
+#include "xsched/cuda/hal/common/memory_manager.h"
 
 using namespace xsched::cuda;
 using namespace xsched::preempt;
@@ -52,6 +54,26 @@ void CudaQueueLv1::Synchronize()
 void CudaQueueLv1::OnXQueueCreate()
 {
     CUDA_ASSERT(Driver::CtxSetCurrent(context_));
+}
+
+void CudaQueueLv1::OnXQueueSuspend()
+{
+    XQueueHandle xq = this->GetXQueue() == nullptr ? 0 : this->GetXQueue()->GetHandle();
+    CUcontext old_ctx = nullptr;
+    CUDA_ASSERT(Driver::CtxGetCurrent(&old_ctx));
+    CUDA_ASSERT(Driver::CtxSetCurrent(context_));
+    CudaMemoryManager::OnQueueSuspend(context_, cudevice_, xq);
+    CUDA_ASSERT(Driver::CtxSetCurrent(old_ctx));
+}
+
+void CudaQueueLv1::BeforeXQueueResume()
+{
+    XQueueHandle xq = this->GetXQueue() == nullptr ? 0 : this->GetXQueue()->GetHandle();
+    CUcontext old_ctx = nullptr;
+    CUDA_ASSERT(Driver::CtxGetCurrent(&old_ctx));
+    CUDA_ASSERT(Driver::CtxSetCurrent(context_));
+    CudaMemoryManager::BeforeQueueResume(context_, cudevice_, xq);
+    CUDA_ASSERT(Driver::CtxSetCurrent(old_ctx));
 }
 
 CUresult CudaQueueLv1::DirectLaunch(std::shared_ptr<CudaKernelCommand> kernel, CUstream stream)

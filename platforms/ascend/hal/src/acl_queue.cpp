@@ -1,9 +1,11 @@
 #include "xsched/protocol/device.h"
+#include "xsched/preempt/xqueue/xqueue.h"
 #include "xsched/ascend/hal.h"
 #include "xsched/ascend/hal/driver.h"
 #include "xsched/ascend/hal/acl_queue.h"
 #include "xsched/ascend/hal/acl_assert.h"
 #include "xsched/ascend/hal/acl_command.h"
+#include "xsched/ascend/hal/memory_manager.h"
 
 using namespace xsched::ascend;
 using namespace xsched::preempt;
@@ -37,6 +39,26 @@ void AclQueue::Synchronize()
 void AclQueue::OnXQueueCreate()
 {
     ACL_ASSERT(Driver::rtSetCurrentContext(context_));
+}
+
+void AclQueue::OnXQueueSuspend()
+{
+    XQueueHandle xq = this->GetXQueue() == nullptr ? 0 : this->GetXQueue()->GetHandle();
+    aclrtContext cur_ctx = nullptr;
+    ACL_ASSERT(Driver::rtGetCurrentContext(&cur_ctx));
+    if (cur_ctx != context_) ACL_ASSERT(Driver::rtSetCurrentContext(context_));
+    AscendMemoryManager::OnQueueSuspend(context_, device_id_, xq);
+    if (cur_ctx != context_) ACL_ASSERT(Driver::rtSetCurrentContext(cur_ctx));
+}
+
+void AclQueue::BeforeXQueueResume()
+{
+    XQueueHandle xq = this->GetXQueue() == nullptr ? 0 : this->GetXQueue()->GetHandle();
+    aclrtContext cur_ctx = nullptr;
+    ACL_ASSERT(Driver::rtGetCurrentContext(&cur_ctx));
+    if (cur_ctx != context_) ACL_ASSERT(Driver::rtSetCurrentContext(context_));
+    AscendMemoryManager::BeforeQueueResume(context_, device_id_, xq);
+    if (cur_ctx != context_) ACL_ASSERT(Driver::rtSetCurrentContext(cur_ctx));
 }
 
 EXPORT_C_FUNC XResult AclQueueCreate(HwQueueHandle *hwq, aclrtStream stream)

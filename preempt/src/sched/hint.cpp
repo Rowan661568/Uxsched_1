@@ -4,6 +4,7 @@
 #include "xsched/utils/common.h"
 #include "xsched/sched/protocol/hint.h"
 #include "xsched/preempt/sched/agent.h"
+#include "xsched/preempt/memory/admission.h"
 #include "xsched/preempt/xqueue/xqueue.h"
 
 using namespace xsched::sched;
@@ -21,6 +22,7 @@ EXPORT_C_FUNC XResult XHintPriority(XQueueHandle xq, Priority prio)
         XWARN("XQueue with handle 0x" FMT_64X " does not exist", xq);
         return res;
     }
+    MemoryAdmissionManager::SetQueuePriority(xq, prio);
     SchedAgent::SendHint(std::make_shared<PriorityHint>(xq, prio));
     return kXSchedSuccess;
 }

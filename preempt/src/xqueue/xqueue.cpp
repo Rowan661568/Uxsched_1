@@ -1,6 +1,7 @@
 #include "xsched/hint.h"
 #include "xsched/xqueue.h"
 #include "xsched/preempt/hal/hw_command.h"
+#include "xsched/preempt/memory/admission.h"
 #include "xsched/preempt/xqueue/xqueue.h"
 #include "xsched/preempt/xqueue/async_xqueue.h"
 
@@ -61,6 +62,7 @@ XResult XQueueManager::Del(XQueueHandle xq_h)
     auto hwq_shptr = xq_shptr->GetHwQueue();
     if (hwq_shptr != nullptr) hwq_shptr->SetXQueue(nullptr); // Break circular reference.
     xqs_.erase(it);
+    MemoryAdmissionManager::RemoveQueue(xq_h);
     lock.unlock(); // avoid xq_shptr->WaitAll(); with the lock held.
 
     // Wait for all commands to finish to prevent the launch worker from launching

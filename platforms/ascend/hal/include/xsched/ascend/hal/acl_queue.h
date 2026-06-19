@@ -17,6 +17,8 @@ public:
     virtual void Launch(std::shared_ptr<preempt::HwCommand> hw_cmd) override;
     virtual void Synchronize() override;
     virtual void OnXQueueCreate() override;
+    virtual void OnXQueueSuspend() override;
+    virtual void BeforeXQueueResume() override;
 
     virtual XDevice       GetDevice()            override { return device_; }
     virtual HwQueueHandle GetHandle()            override { return GetHwQueueHandle(kStream); }

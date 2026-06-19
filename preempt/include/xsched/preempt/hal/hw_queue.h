@@ -69,6 +69,13 @@ public:
     /// @param hw_cmd The HwCommand submitted to the XQueue.
     virtual void OnHwCommandSubmit(std::shared_ptr<HwCommand> hw_cmd) { UNUSED(hw_cmd); }
 
+    /// @brief A callback function that will be called after the launch worker is paused and
+    /// before device-level deactivation/interruption is issued.
+    virtual void OnXQueueSuspend() {}
+
+    /// @brief A callback function that will be called before a suspended XQueue is reactivated.
+    virtual void BeforeXQueueResume() {}
+
     std::shared_ptr<XQueue> GetXQueue() { return xq_; }
     void SetXQueue(std::shared_ptr<XQueue> xq) { xq_ = xq; }
 

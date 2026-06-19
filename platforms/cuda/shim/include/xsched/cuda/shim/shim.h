@@ -32,6 +32,10 @@ CUresult XLaunchKernelEx(const CUlaunchConfig *config, CUfunction f, void **para
 CUresult XLaunchHostFunc(CUstream stream, CUhostFn fn, void *data);
 
 ////////////////////////////// memory related //////////////////////////////
+CUresult XMemAllocManaged(CUdeviceptr *dptr, size_t bytesize, unsigned int flags);
+CUresult XMemFree_v2(CUdeviceptr dptr);
+CUresult XMemFree(CUdeviceptr_v1 dptr);
+
 CUDA_SHIM_FUNC(MemcpyHtoDAsync_v2, CudaMemcpyHtoDV2Command, CUdeviceptr, dstDevice, const void *, srcHost, size_t, ByteCount);
 CUDA_SHIM_FUNC(MemcpyDtoHAsync_v2, CudaMemcpyDtoHV2Command, void *, dstHost, CUdeviceptr, srcDevice, size_t, ByteCount);
 CUDA_SHIM_FUNC(MemcpyDtoDAsync_v2, CudaMemcpyDtoDV2Command, CUdeviceptr, dstDevice, CUdeviceptr, srcDevice, size_t, ByteCount);
