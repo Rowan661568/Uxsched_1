@@ -7,7 +7,7 @@ This follows the paper-style comparison:
 3. foreground colocated with a background workload under XSched LV1;
 4. foreground colocated with a background workload under XSched LV2.
 
-The foreground task records per-batch ResNet50 latency, so p50/p95/p99 and
+The foreground task records per-batch inference latency, so p50/p95/p99 and
 slowdown versus the alone case can be reported directly.
 """
 
@@ -42,6 +42,7 @@ class ProcSpec:
     role: str
     scenario: str
     priority: int
+    index: int
     proc: subprocess.Popen[str]
     log_file: TextIO
     start_elapsed_s: float
@@ -50,7 +51,7 @@ class ProcSpec:
 
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(
-        description="Measure foreground ResNet50 latency CDF with native vs XSched scheduling."
+        description="Measure foreground inference latency CDF with native vs XSched scheduling."
     )
     p.add_argument("--worker", choices=["foreground", "background"], help=argparse.SUPPRESS)
     p.add_argument("--scenario", choices=["alone", "native", "xsched", "xsched_lv2", "all"],
@@ -59,12 +60,17 @@ def parse_args() -> argparse.Namespace:
                    help="Number of foreground measured batches.")
     p.add_argument("--warmup", type=int, default=10,
                    help="Foreground warmup batches before recording latency.")
+    p.add_argument("--foreground-workload", choices=["resnet50", "transformer"],
+                   default="resnet50",
+                   help="Foreground high-priority inference workload.")
     p.add_argument("--batch-size", type=int, default=32)
     p.add_argument("--train-batch-size", type=int, default=16)
     p.add_argument("--image-size", type=int, default=224)
     p.add_argument("--gpu", type=int, default=0)
     p.add_argument("--hp-delay", type=float, default=10.0,
                    help="Seconds to let background training run before starting foreground.")
+    p.add_argument("--background-count", type=int, default=1,
+                   help="Number of low-priority background training processes.")
     p.add_argument("--xqueue-level", type=int, default=1)
     p.add_argument("--threshold", type=int, default=16)
     p.add_argument("--batch-commands", type=int, default=8)
@@ -259,9 +265,10 @@ def worker_cmd(args: argparse.Namespace, role: str, scenario: str) -> list[str]:
 
 
 def launch_worker(args: argparse.Namespace, scenario: str, role: str, priority: int,
+                  index: int,
                   result_dir: Path, t0: float, rows: list[dict[str, object]],
                   lock: threading.Lock) -> tuple[ProcSpec, threading.Thread]:
-    log_file = (result_dir / f"{scenario}_{role}.log").open("w", buffering=1)
+    log_file = (result_dir / f"{scenario}_{role}_{index}.log").open("w", buffering=1)
     proc = subprocess.Popen(
         worker_cmd(args, role, scenario),
         cwd=ROOT,
@@ -272,11 +279,12 @@ def launch_worker(args: argparse.Namespace, scenario: str, role: str, priority: 
         bufsize=1,
         start_new_session=True,
     )
-    spec = ProcSpec(role=role, scenario=scenario, priority=priority, proc=proc,
+    spec = ProcSpec(role=role, scenario=scenario, priority=priority, index=index, proc=proc,
                     log_file=log_file, start_elapsed_s=round(time.time() - t0, 3))
     thread = threading.Thread(target=stream_worker, args=(spec, t0, rows, lock), daemon=True)
     thread.start()
-    print(f"started {scenario} {role} priority={priority} pid={proc.pid}", flush=True)
+    print(f"started {scenario} {role}[{index}] priority={priority} pid={proc.pid}",
+          flush=True)
     return spec, thread
 
 
@@ -294,6 +302,7 @@ def stream_worker(spec: ProcSpec, t0: float, rows: list[dict[str, object]],
             "elapsed_s": round(time.time() - t0, 3),
             "scenario": spec.scenario,
             "role": spec.role,
+            "index": spec.index,
             "priority": spec.priority,
             "pid": spec.proc.pid,
             "seq": seq,
@@ -303,7 +312,7 @@ def stream_worker(spec: ProcSpec, t0: float, rows: list[dict[str, object]],
         with lock:
             rows.append(row)
         print(
-            f"{row['elapsed_s']:>7.3f}s {spec.scenario} {spec.role} "
+            f"{row['elapsed_s']:>7.3f}s {spec.scenario} {spec.role}[{spec.index}] "
             f"latency={row['latency_ms']:.3f} ms",
             flush=True,
         )
@@ -320,7 +329,8 @@ def percentile(vals: list[float], pct: float) -> float:
     return vals[lo] * (1.0 - frac) + vals[hi] * frac
 
 
-def summarize_scenario(scenario: str, hp: ProcSpec, background: ProcSpec | None) -> dict[str, object]:
+def summarize_scenario(scenario: str, hp: ProcSpec,
+                       backgrounds: list[ProcSpec]) -> dict[str, object]:
     vals = [float(r["latency_ms"]) for r in hp.records]
     return {
         "scenario": scenario,
@@ -333,8 +343,9 @@ def summarize_scenario(scenario: str, hp: ProcSpec, background: ProcSpec | None)
         "latency_min_ms": round(min(vals), 3) if vals else 0.0,
         "latency_max_ms": round(max(vals), 3) if vals else 0.0,
         "foreground_returncode": hp.proc.returncode,
-        "background_pid": background.proc.pid if background else None,
-        "background_returncode": background.proc.returncode if background else None,
+        "background_count": len(backgrounds),
+        "background_pids": [bg.proc.pid for bg in backgrounds],
+        "background_returncodes": [bg.proc.returncode for bg in backgrounds],
     }
 
 
@@ -342,7 +353,8 @@ def write_latency_csv(path: Path, rows: list[dict[str, object]]) -> None:
     with path.open("w", newline="") as f:
         writer = csv.DictWriter(
             f,
-            fieldnames=["elapsed_s", "scenario", "role", "priority", "pid", "seq", "latency_ms"],
+            fieldnames=["elapsed_s", "scenario", "role", "index", "priority", "pid", "seq",
+                        "latency_ms"],
         )
         writer.writeheader()
         writer.writerows(sorted(rows, key=lambda r: (str(r["scenario"]), int(r["seq"]))))
@@ -362,16 +374,19 @@ def run_one(args: argparse.Namespace, scenario: str, result_dir: Path) -> dict[s
         if scenario.startswith("xsched"):
             xserver_proc = start_xserver(args, scenario_dir)
 
-        background = None
+        backgrounds: list[ProcSpec] = []
         if scenario != "alone":
-            background, thread = launch_worker(args, scenario, "background", 0,
-                                               scenario_dir, t0, rows, lock)
-            specs.append(background)
-            threads.append(thread)
+            for i in range(args.background_count):
+                background, thread = launch_worker(args, scenario, "background", 0, i,
+                                                   scenario_dir, t0, rows, lock)
+                backgrounds.append(background)
+                specs.append(background)
+                threads.append(thread)
+                time.sleep(0.5)
             print(f"waiting {args.hp_delay:.1f}s before foreground", flush=True)
             time.sleep(args.hp_delay)
 
-        foreground, thread = launch_worker(args, scenario, "foreground", 1,
+        foreground, thread = launch_worker(args, scenario, "foreground", 1, 0,
                                            scenario_dir, t0, rows, lock)
         specs.append(foreground)
         threads.append(thread)
@@ -390,7 +405,7 @@ def run_one(args: argparse.Namespace, scenario: str, result_dir: Path) -> dict[s
         final_rows = list(rows)
     write_latency_csv(scenario_dir / "latency.csv", final_rows)
     hp = next(spec for spec in specs if spec.role == "foreground")
-    bg = next((spec for spec in specs if spec.role == "background"), None)
+    bg = [spec for spec in specs if spec.role == "background"]
     summary = summarize_scenario(scenario, hp, bg)
     summary["foreground_batch_size"] = args.batch_size
     (scenario_dir / "summary.json").write_text(json.dumps(summary, indent=2) + "\n")
@@ -429,12 +444,31 @@ def foreground_worker(args: argparse.Namespace) -> int:
     torch.backends.cudnn.benchmark = True
     stream = torch.cuda.Stream(device=device)
     torch.cuda.set_stream(stream)
-    model = torchvision.models.resnet50(weights=None).eval().to(device)
-    data = torch.ones(args.batch_size, 3, args.image_size, args.image_size, device=device)
 
-    def step() -> None:
-        with torch.no_grad(), torch.cuda.stream(stream):
-            model(data)
+    if args.foreground_workload == "resnet50":
+        model = torchvision.models.resnet50(weights=None).eval().to(device)
+        data = torch.ones(args.batch_size, 3, args.image_size, args.image_size, device=device)
+
+        def step() -> None:
+            with torch.no_grad(), torch.cuda.stream(stream):
+                model(data)
+
+    else:
+        model = torch.nn.Transformer(
+            d_model=1024,
+            nhead=16,
+            num_encoder_layers=12,
+            num_decoder_layers=12,
+            dim_feedforward=4096,
+            dropout=0.0,
+            batch_first=True,
+        ).eval().to(device)
+        src = torch.randn(args.batch_size, 128, 1024, device=device)
+        tgt = torch.randn(args.batch_size, 128, 1024, device=device)
+
+        def step() -> None:
+            with torch.no_grad(), torch.cuda.stream(stream):
+                model(src, tgt)
 
     for _ in range(args.warmup):
         step()
@@ -487,13 +521,15 @@ def main() -> int:
         return background_worker(args)
     if args.requests <= 0:
         raise SystemExit("--requests must be positive")
+    if args.background_count < 0:
+        raise SystemExit("--background-count must be non-negative")
     if args.scenario in ("xsched", "all") and not OUTPUT_LIB.exists():
         raise SystemExit(f"missing output lib directory: {OUTPUT_LIB}")
 
     result_dir = make_result_dir(args.result_dir)
     config = vars(args).copy()
     config["result_dir"] = str(result_dir)
-    config["foreground"] = "ResNet50 inference per-batch latency"
+    config["foreground"] = f"{args.foreground_workload} inference per-batch latency"
     config["background"] = "MobileNetV2 continuous batch training"
     (result_dir / "config.json").write_text(json.dumps(config, indent=2) + "\n")
 

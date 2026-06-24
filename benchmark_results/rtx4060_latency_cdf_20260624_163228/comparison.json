@@ -1,0 +1,86 @@
+[
+  {
+    "scenario": "alone",
+    "foreground_samples": 500,
+    "foreground_batch_size": 32,
+    "latency_avg_ms": 57.832,
+    "latency_p50_ms": 57.163,
+    "latency_p95_ms": 62.462,
+    "latency_p99_ms": 62.655,
+    "latency_min_ms": 56.894,
+    "latency_max_ms": 65.138,
+    "foreground_returncode": 0,
+    "background_count": 0,
+    "background_pids": [],
+    "background_returncodes": [],
+    "p50_slowdown_vs_alone": 1.0,
+    "p95_slowdown_vs_alone": 1.0,
+    "p99_slowdown_vs_alone": 1.0
+  },
+  {
+    "scenario": "native",
+    "foreground_samples": 500,
+    "foreground_batch_size": 32,
+    "latency_avg_ms": 144.607,
+    "latency_p50_ms": 144.512,
+    "latency_p95_ms": 145.908,
+    "latency_p99_ms": 146.591,
+    "latency_min_ms": 142.093,
+    "latency_max_ms": 161.161,
+    "foreground_returncode": 0,
+    "background_count": 1,
+    "background_pids": [
+      10861
+    ],
+    "background_returncodes": [
+      -2
+    ],
+    "p50_slowdown_vs_alone": 2.528,
+    "p95_slowdown_vs_alone": 2.336,
+    "p99_slowdown_vs_alone": 2.34
+  },
+  {
+    "scenario": "xsched",
+    "foreground_samples": 500,
+    "foreground_batch_size": 32,
+    "latency_avg_ms": 67.501,
+    "latency_p50_ms": 67.013,
+    "latency_p95_ms": 69.785,
+    "latency_p99_ms": 74.403,
+    "latency_min_ms": 61.066,
+    "latency_max_ms": 77.988,
+    "foreground_returncode": 0,
+    "background_count": 1,
+    "background_pids": [
+      11373
+    ],
+    "background_returncodes": [
+      -2
+    ],
+    "p50_slowdown_vs_alone": 1.172,
+    "p95_slowdown_vs_alone": 1.117,
+    "p99_slowdown_vs_alone": 1.188
+  },
+  {
+    "scenario": "xsched_lv2",
+    "foreground_samples": 500,
+    "foreground_batch_size": 32,
+    "latency_avg_ms": 80.326,
+    "latency_p50_ms": 77.099,
+    "latency_p95_ms": 93.417,
+    "latency_p99_ms": 98.297,
+    "latency_min_ms": 73.26,
+    "latency_max_ms": 106.841,
+    "foreground_returncode": 0,
+    "background_count": 1,
+    "background_pids": [
+      12090
+    ],
+    "background_returncodes": [
+      -2
+    ],
+    "p50_slowdown_vs_alone": 1.349,
+    "p95_slowdown_vs_alone": 1.496,
+    "p99_slowdown_vs_alone": 1.569
+  }
+]
