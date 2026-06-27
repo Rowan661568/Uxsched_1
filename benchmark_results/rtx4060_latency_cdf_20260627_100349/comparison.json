@@ -1,0 +1,95 @@
+[
+  {
+    "scenario": "alone",
+    "foreground_samples": 500,
+    "foreground_batch_size": 32,
+    "latency_avg_ms": 63.559,
+    "latency_p50_ms": 63.545,
+    "latency_p95_ms": 63.909,
+    "latency_p99_ms": 64.323,
+    "latency_min_ms": 62.506,
+    "latency_max_ms": 66.424,
+    "foreground_returncode": 0,
+    "background_count": 0,
+    "background_pids": [],
+    "background_returncodes": [],
+    "p50_slowdown_vs_alone": 1.0,
+    "p95_slowdown_vs_alone": 1.0,
+    "p99_slowdown_vs_alone": 1.0
+  },
+  {
+    "scenario": "native",
+    "foreground_samples": 500,
+    "foreground_batch_size": 32,
+    "latency_avg_ms": 159.695,
+    "latency_p50_ms": 159.411,
+    "latency_p95_ms": 163.953,
+    "latency_p99_ms": 166.591,
+    "latency_min_ms": 153.125,
+    "latency_max_ms": 169.823,
+    "foreground_returncode": 0,
+    "background_count": 1,
+    "background_pids": [
+      12550
+    ],
+    "background_returncodes": [
+      0
+    ],
+    "background_iters_0": 1059,
+    "background_duration_s_0": 103.931,
+    "background_throughput_iters_per_s_0": 10.19,
+    "p50_slowdown_vs_alone": 2.509,
+    "p95_slowdown_vs_alone": 2.565,
+    "p99_slowdown_vs_alone": 2.59
+  },
+  {
+    "scenario": "xsched",
+    "foreground_samples": 500,
+    "foreground_batch_size": 32,
+    "latency_avg_ms": 123.09,
+    "latency_p50_ms": 125.53,
+    "latency_p95_ms": 131.454,
+    "latency_p99_ms": 136.931,
+    "latency_min_ms": 93.338,
+    "latency_max_ms": 151.991,
+    "foreground_returncode": 0,
+    "background_count": 1,
+    "background_pids": [
+      13380
+    ],
+    "background_returncodes": [
+      0
+    ],
+    "background_iters_0": 84,
+    "background_duration_s_0": 91.872,
+    "background_throughput_iters_per_s_0": 0.91,
+    "p50_slowdown_vs_alone": 1.975,
+    "p95_slowdown_vs_alone": 2.057,
+    "p99_slowdown_vs_alone": 2.129
+  },
+  {
+    "scenario": "xsched_lv2",
+    "foreground_samples": 500,
+    "foreground_batch_size": 32,
+    "latency_avg_ms": 104.929,
+    "latency_p50_ms": 104.527,
+    "latency_p95_ms": 115.022,
+    "latency_p99_ms": 120.04,
+    "latency_min_ms": 69.431,
+    "latency_max_ms": 121.967,
+    "foreground_returncode": 0,
+    "background_count": 1,
+    "background_pids": [
+      14572
+    ],
+    "background_returncodes": [
+      0
+    ],
+    "background_iters_0": 193,
+    "background_duration_s_0": 86.602,
+    "background_throughput_iters_per_s_0": 2.23,
+    "p50_slowdown_vs_alone": 1.645,
+    "p95_slowdown_vs_alone": 1.8,
+    "p99_slowdown_vs_alone": 1.866
+  }
+]

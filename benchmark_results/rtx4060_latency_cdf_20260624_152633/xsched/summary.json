@@ -1,0 +1,19 @@
+{
+  "scenario": "xsched",
+  "foreground_samples": 500,
+  "foreground_batch_size": 32,
+  "latency_avg_ms": 62.943,
+  "latency_p50_ms": 63.591,
+  "latency_p95_ms": 66.769,
+  "latency_p99_ms": 69.793,
+  "latency_min_ms": 58.179,
+  "latency_max_ms": 73.001,
+  "foreground_returncode": 0,
+  "background_count": 1,
+  "background_pids": [
+    28910
+  ],
+  "background_returncodes": [
+    -2
+  ]
+}

@@ -64,13 +64,13 @@ DEFINE_EXPORT_C_REDIRECT_CALL(Driver::CtxAttach, CUresult, cuCtxAttach, CUcontex
 DEFINE_EXPORT_C_REDIRECT_CALL(Driver::CtxDetach, CUresult, cuCtxDetach, CUcontext, ctx);
 DEFINE_EXPORT_C_REDIRECT_CALL(Driver::CtxGetSharedMemConfig, CUresult, cuCtxGetSharedMemConfig, CUsharedconfig *, pConfig);
 DEFINE_EXPORT_C_REDIRECT_CALL(Driver::CtxSetSharedMemConfig, CUresult, cuCtxSetSharedMemConfig, CUsharedconfig, config);
-DEFINE_EXPORT_C_REDIRECT_CALL(Driver::ModuleLoad, CUresult, cuModuleLoad, CUmodule *, module, const char *, fname);
-DEFINE_EXPORT_C_REDIRECT_CALL(Driver::ModuleLoadData, CUresult, cuModuleLoadData, CUmodule *, module, const void *, image);
-DEFINE_EXPORT_C_REDIRECT_CALL(Driver::ModuleLoadDataEx, CUresult, cuModuleLoadDataEx, CUmodule *, module, const void *, image, unsigned int, numOptions, CUjit_option *, options, void **, optionValues);
+DEFINE_EXPORT_C_REDIRECT_CALL(hb_split::XModuleLoad, CUresult, cuModuleLoad, CUmodule *, module, const char *, fname);
+DEFINE_EXPORT_C_REDIRECT_CALL(hb_split::XModuleLoadData, CUresult, cuModuleLoadData, CUmodule *, module, const void *, image);
+DEFINE_EXPORT_C_REDIRECT_CALL(hb_split::XModuleLoadDataEx, CUresult, cuModuleLoadDataEx, CUmodule *, module, const void *, image, unsigned int, numOptions, CUjit_option *, options, void **, optionValues);
 DEFINE_EXPORT_C_REDIRECT_CALL(Driver::ModuleLoadFatBinary, CUresult, cuModuleLoadFatBinary, CUmodule *, module, const void *, fatCubin);
-DEFINE_EXPORT_C_REDIRECT_CALL(Driver::ModuleUnload, CUresult, cuModuleUnload, CUmodule, hmod);
+DEFINE_EXPORT_C_REDIRECT_CALL(hb_split::XModuleUnload, CUresult, cuModuleUnload, CUmodule, hmod);
 DEFINE_EXPORT_C_REDIRECT_CALL(Driver::ModuleGetLoadingMode, CUresult, cuModuleGetLoadingMode, CUmoduleLoadingMode *, mode);
-DEFINE_EXPORT_C_REDIRECT_CALL(Driver::ModuleGetFunction, CUresult, cuModuleGetFunction, CUfunction *, hfunc, CUmodule, hmod, const char *, name);
+DEFINE_EXPORT_C_REDIRECT_CALL(hb_split::XModuleGetFunction, CUresult, cuModuleGetFunction, CUfunction *, hfunc, CUmodule, hmod, const char *, name);
 DEFINE_EXPORT_C_REDIRECT_CALL(Driver::ModuleGetFunctionCount, CUresult, cuModuleGetFunctionCount, unsigned int *, count, CUmodule, mod);
 DEFINE_EXPORT_C_REDIRECT_CALL(Driver::ModuleEnumerateFunctions, CUresult, cuModuleEnumerateFunctions, CUfunction *, functions, unsigned int, numFunctions, CUmodule, mod);
 DEFINE_EXPORT_C_REDIRECT_CALL(Driver::ModuleGetGlobal_v2, CUresult, cuModuleGetGlobal_v2, CUdeviceptr *, dptr, size_t *, bytes, CUmodule, hmod, const char *, name);

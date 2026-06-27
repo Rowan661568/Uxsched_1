@@ -1,0 +1,3 @@
+level,arch,kernel_us,threshold,batch_size,burst,iters,warmup_s,jitter_us,preempt_avg_us,preempt_p50_us,preempt_p95_us,preempt_p99_us,restore_avg_us,restore_p99_us
+1,89,500,8,4,64,20,1.0,800,3435.09945,3582.982,4045.188,4045.188,40.3816,86.982
+2,89,500,8,4,64,20,1.0,800,461.8979,457.183,722.309,722.309,475.8211,796.374

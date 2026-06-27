@@ -3,6 +3,7 @@
 #include "xsched/cuda/hal/level3/cuda_queue.h"
 #include "xsched/cuda/hal/common/levels.h"
 #include "xsched/cuda/hal/common/driver.h"
+#include "xsched/cuda/hal/common/handle.h"
 #include "xsched/cuda/hal/common/cuda_assert.h"
 #include "xsched/cuda/hal/arch/sm35.h"
 #include "xsched/cuda/hal/arch/sm70.h"
@@ -58,15 +59,21 @@ std::shared_ptr<HwQueue> xsched::cuda::CudaQueueCreate(CUstream stream)
     return std::make_shared<CudaQueueLv1>(stream);
 #endif
 
+    CUcontext current_ctx = nullptr;
+    CUDA_ASSERT(Driver::CtxGetCurrent(&current_ctx));
+    XASSERT(current_ctx != nullptr, "create CudaQueue failed: current context is nullptr");
+
+    if (stream == nullptr) {
+        return std::make_shared<CudaQueueLv1>(stream, GetHwQueueHandle(stream, current_ctx));
+    }
+
     if (GetCudaLv3Implementation() == kCudaLv3ImplementationTsg) {
         return std::make_shared<CudaQueueLv3Tsg>(stream);
     }
 
     CUdevice dev;
     CUcontext stream_ctx;
-    CUcontext current_ctx;
     CUDA_ASSERT(Driver::StreamGetCtx(stream, &stream_ctx));
-    CUDA_ASSERT(Driver::CtxGetCurrent(&current_ctx));
     XASSERT(current_ctx == stream_ctx,
             "create CudaQueue failed: current context (%p) does not match stream context (%p)",
             current_ctx, stream_ctx);
@@ -90,6 +97,10 @@ CUresult xsched::cuda::DirectLaunch(std::shared_ptr<CudaKernelCommand> kernel, C
 #if defined(_WIN32)
     return CudaQueueLv1::DirectLaunch(kernel, stream);
 #endif
+
+    if (stream == nullptr) {
+        return CudaQueueLv1::DirectLaunch(kernel, stream);
+    }
 
     if (GetCudaLv3Implementation() == kCudaLv3ImplementationTsg) {
         return CudaQueueLv3Tsg::DirectLaunch(kernel, stream);

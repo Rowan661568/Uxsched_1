@@ -6,6 +6,8 @@
 #include "xsched/cuda/hal/common/driver.h"
 #include "xsched/cuda/hal/common/handle.h"
 #include "xsched/cuda/hal/common/cuda_command.h"
+#include "xsched/cuda/hal/hb_split/backend.h"
+#include "xsched/cuda/hal/runtime/runtime_strategy.h"
 
 namespace xsched::cuda
 {
@@ -15,9 +17,8 @@ inline CUresult X##name(FOR_EACH_PAIR_COMMA(DECLARE_PARAM, __VA_ARGS__), CUstrea
 { \
     if (stream == 0) { \
         WaitBlockingXQueues(); \
-        return Driver::name(FOR_EACH_PAIR_COMMA(DECLARE_ARG, __VA_ARGS__), stream); \
     } \
-    auto xq = xsched::preempt::HwQueueManager::GetXQueue(GetHwQueueHandle(stream)); \
+    auto xq = ResolveXQueueForStream("cu" #name, stream); \
     if (xq == nullptr) return Driver::name(FOR_EACH_PAIR_COMMA(DECLARE_ARG, __VA_ARGS__), stream); \
     auto hw_cmd = std::make_shared<cmd>(FOR_EACH_PAIR_COMMA(DECLARE_ARG, __VA_ARGS__)); \
     xq->Submit(hw_cmd); \
@@ -25,6 +26,8 @@ inline CUresult X##name(FOR_EACH_PAIR_COMMA(DECLARE_PARAM, __VA_ARGS__), CUstrea
 }
 
 void WaitBlockingXQueues();
+std::shared_ptr<preempt::XQueue> ResolveXQueueForStream(const char *api, CUstream stream,
+                                                        bool auto_create = true);
 
 ////////////////////////////// kernel related //////////////////////////////
 CUresult XLaunchKernel(CUfunction f, unsigned int gdx, unsigned int gdy, unsigned int gdz, unsigned int bdx, unsigned int bdy, unsigned int bdz, unsigned int shmem, CUstream stream, void **params, void **extra);

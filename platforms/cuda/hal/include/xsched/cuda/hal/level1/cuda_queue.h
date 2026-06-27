@@ -12,7 +12,7 @@ namespace xsched::cuda
 class CudaQueueLv1 : public preempt::HwQueue
 {
 public:
-    CudaQueueLv1(CUstream stream);
+    CudaQueueLv1(CUstream stream, HwQueueHandle handle = 0);
     virtual ~CudaQueueLv1() = default;
 
     virtual void Launch(std::shared_ptr<preempt::HwCommand> hw_cmd) override;
@@ -24,12 +24,13 @@ public:
 
     unsigned int          GetStreamFlags()       const    { return stream_flags_; }
     virtual XDevice       GetDevice()            override { return xdevice_; }
-    virtual HwQueueHandle GetHandle()            override { return GetHwQueueHandle(kStream); }
+    virtual HwQueueHandle GetHandle()            override { return kHandle; }
     virtual bool          SupportDynamicLevel()  override { return false; }
     virtual XPreemptLevel GetMaxSupportedLevel() override { return kPreemptLevelBlock; }
 
 protected:
     const CUstream kStream;
+    const HwQueueHandle kHandle;
     unsigned int   stream_flags_ = 0;
     CUdevice       cudevice_ = 0;
     XDevice        xdevice_;

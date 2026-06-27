@@ -1,0 +1,22 @@
+{
+  "scenario": "native",
+  "foreground_samples": 500,
+  "foreground_batch_size": 32,
+  "latency_avg_ms": 159.695,
+  "latency_p50_ms": 159.411,
+  "latency_p95_ms": 163.953,
+  "latency_p99_ms": 166.591,
+  "latency_min_ms": 153.125,
+  "latency_max_ms": 169.823,
+  "foreground_returncode": 0,
+  "background_count": 1,
+  "background_pids": [
+    12550
+  ],
+  "background_returncodes": [
+    0
+  ],
+  "background_iters_0": 1059,
+  "background_duration_s_0": 103.931,
+  "background_throughput_iters_per_s_0": 10.19
+}

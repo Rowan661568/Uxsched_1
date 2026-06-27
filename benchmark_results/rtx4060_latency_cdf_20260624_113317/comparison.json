@@ -1,0 +1,92 @@
+[
+  {
+    "scenario": "alone",
+    "foreground_samples": 200,
+    "foreground_batch_size": 32,
+    "latency_avg_ms": 56.515,
+    "latency_p50_ms": 56.47,
+    "latency_p95_ms": 56.991,
+    "latency_p99_ms": 59.171,
+    "latency_min_ms": 55.795,
+    "latency_max_ms": 59.526,
+    "foreground_returncode": 0,
+    "background_count": 0,
+    "background_pids": [],
+    "background_returncodes": [],
+    "p50_slowdown_vs_alone": 1.0,
+    "p95_slowdown_vs_alone": 1.0,
+    "p99_slowdown_vs_alone": 1.0
+  },
+  {
+    "scenario": "native",
+    "foreground_samples": 200,
+    "foreground_batch_size": 32,
+    "latency_avg_ms": 217.736,
+    "latency_p50_ms": 217.661,
+    "latency_p95_ms": 219.082,
+    "latency_p99_ms": 219.292,
+    "latency_min_ms": 215.22,
+    "latency_max_ms": 220.009,
+    "foreground_returncode": 0,
+    "background_count": 2,
+    "background_pids": [
+      8855,
+      8888
+    ],
+    "background_returncodes": [
+      -2,
+      -2
+    ],
+    "p50_slowdown_vs_alone": 3.854,
+    "p95_slowdown_vs_alone": 3.844,
+    "p99_slowdown_vs_alone": 3.706
+  },
+  {
+    "scenario": "xsched",
+    "foreground_samples": 200,
+    "foreground_batch_size": 32,
+    "latency_avg_ms": 381.875,
+    "latency_p50_ms": 119.757,
+    "latency_p95_ms": 2500.022,
+    "latency_p99_ms": 3186.603,
+    "latency_min_ms": 61.549,
+    "latency_max_ms": 5046.23,
+    "foreground_returncode": 0,
+    "background_count": 2,
+    "background_pids": [
+      9653,
+      9692
+    ],
+    "background_returncodes": [
+      -2,
+      -2
+    ],
+    "p50_slowdown_vs_alone": 2.121,
+    "p95_slowdown_vs_alone": 43.867,
+    "p99_slowdown_vs_alone": 53.854
+  },
+  {
+    "scenario": "xsched_lv2",
+    "foreground_samples": 200,
+    "foreground_batch_size": 32,
+    "latency_avg_ms": 290.35,
+    "latency_p50_ms": 92.901,
+    "latency_p95_ms": 2532.843,
+    "latency_p99_ms": 2714.821,
+    "latency_min_ms": 65.712,
+    "latency_max_ms": 3132.732,
+    "foreground_returncode": 0,
+    "background_count": 2,
+    "background_pids": [
+      11951,
+      11990
+    ],
+    "background_returncodes": [
+      -2,
+      -2
+    ],
+    "p50_slowdown_vs_alone": 1.645,
+    "p95_slowdown_vs_alone": 44.443,
+    "p99_slowdown_vs_alone": 45.881
+  }
+]

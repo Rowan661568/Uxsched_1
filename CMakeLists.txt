@@ -4,6 +4,7 @@ project(XSched VERSION 1.0.0)
 
 option(SHIM_SOFTLINK     "Create softlink for shim library."     OFF)
 option(BUILD_TEST        "Build test cases."                     OFF)
+option(UXSCHED_ENABLE_HB_SPLIT "Enable optional Hummingbird CUDA split backend." OFF)
 
 # Generate a compile_commands.json for Clang
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
