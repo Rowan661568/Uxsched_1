@@ -26,6 +26,8 @@ std::shared_ptr<const Hint> Hint::CopyConstructor(const void *data)
         return std::make_shared<LaxityHint>(data);
     case kHintTypeWindowActive:
         return std::make_shared<WindowActiveHint>(data);
+    case kHintTypeMemoryIntensity:
+        return std::make_shared<MemoryIntensityHint>(data);
     // NEW_POLICY: New HintTypes handling goes here.
     default:
         XASSERT(false, "unknown hint type: %d", meta->type);
