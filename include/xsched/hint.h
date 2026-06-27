@@ -55,6 +55,16 @@ XResult XHintDeadline(XQueueHandle xq, Deadline ddl_us);
 /// @return kXSchedSuccess if successful, otherwise an error code.
 XResult XHintKDeadline(size_t k);
 
+/// @brief Set the memory bandwidth intensity of a device.
+/// Used by the IAH (Interference-Aware Heterogeneous) policy to estimate
+/// cross-device interference risk.
+/// @param device [in] Target device identifier.
+/// @param intensity [in] Memory bandwidth intensity in [0.0, 1.0].
+///        0.0 = compute-bound (no bandwidth pressure).
+///        1.0 = memory-bound (maximum bandwidth pressure).
+/// @return kXSchedSuccess if successful, otherwise an error code.
+XResult XHintMemoryIntensity(XDevice device, double intensity);
+
 #ifdef __cplusplus
 }
 #endif

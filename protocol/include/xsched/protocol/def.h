@@ -58,4 +58,5 @@
 #define XSCHED_POLICY_NAME_CFS  "CFS"  //Complete Fair Scheduler
 #define XSCHED_POLICY_NAME_MLFQ   "MLFQ"
 #define XSCHED_POLICY_NAME_SLO  "SLO"  // SLO-aware adaptive priority
+#define XSCHED_POLICY_NAME_IAH  "IAH"  // Interference-Aware Heterogeneous
 // NEW_POLICY: New policy type names go here.

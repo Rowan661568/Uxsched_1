@@ -159,6 +159,43 @@ def save_slowdown_plot(rows: list[dict[str, object]], out: Path, title: str) -> 
     plt.close(fig)
 
 
+def save_throughput_plot(rows: list[dict[str, object]], out: Path, title: str) -> None:
+    scenarios = [str(row["scenario"]) for row in rows]
+    labels = [SCENARIO_LABELS.get(s, s) for s in scenarios]
+
+    # collect all throughput keys
+    thpt_keys = sorted({
+        key for row in rows for key in row
+        if key.startswith("background_throughput_iters_per_s_")
+    })
+
+    # sum throughput across all background workers per scenario
+    vals = []
+    for row in rows:
+        total = sum(float(row.get(k, 0.0)) for k in thpt_keys)
+        vals.append(total)
+
+    colors = [SCENARIO_COLORS.get(s, "#777777") for s in scenarios]
+
+    fig, ax = plt.subplots(figsize=(8, 5), dpi=180)
+    bars = ax.bar(labels, vals, color=colors)
+    for bar, val in zip(bars, vals):
+        ax.text(
+            bar.get_x() + bar.get_width() / 2,
+            bar.get_height(),
+            f"{val:.1f}" if val else "—",
+            ha="center",
+            va="bottom",
+            fontsize=9,
+        )
+    ax.set_title(f"{title} background throughput")
+    ax.set_ylabel("Throughput (iters/s)")
+    ax.grid(axis="y", alpha=0.25)
+    fig.tight_layout()
+    fig.savefig(out)
+    plt.close(fig)
+
+
 def main() -> int:
     args = parse_args()
     result_dir = args.result_dir.resolve()
@@ -169,10 +206,12 @@ def main() -> int:
     save_percentile_plot(rows, out_dir / "latency_percentiles.png", args.title)
     save_cdf_plot(result_dir, rows, out_dir / "latency_cdf.png", args.title)
     save_slowdown_plot(rows, out_dir / "p99_slowdown.png", args.title)
+    save_throughput_plot(rows, out_dir / "throughput.png", args.title)
 
     print(out_dir / "latency_percentiles.png")
     print(out_dir / "latency_cdf.png")
     print(out_dir / "p99_slowdown.png")
+    print(out_dir / "throughput.png")
     return 0
 
 

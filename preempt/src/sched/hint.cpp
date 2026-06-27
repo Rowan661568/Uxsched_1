@@ -71,3 +71,9 @@ EXPORT_C_FUNC XResult XHintKDeadline(size_t k)
     SchedAgent::SendHint(std::make_shared<KDeadlineHint>(k));
     return kXSchedSuccess;
 }
+
+EXPORT_C_FUNC XResult XHintMemoryIntensity(XDevice device, double intensity)
+{
+    SchedAgent::SendHint(std::make_shared<MemoryIntensityHint>(device, intensity));
+    return kXSchedSuccess;
+}

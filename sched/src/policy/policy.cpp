@@ -16,6 +16,7 @@
 #include "xsched/sched/policy/cfs.h"
 #include "xsched/sched/policy/mlfq.h"
 #include "xsched/sched/policy/slo.h"
+#include "xsched/sched/policy/iah.h"
 
 using namespace xsched::sched;
 
@@ -65,6 +66,8 @@ std::unique_ptr<Policy> xsched::sched::CreatePolicy(XPolicyType type)
             return std::make_unique<MultiLevelFeedbackQueuePolicy>();
         case kPolicySLOAdaptive:
             return std::make_unique<SLOAdaptivePolicy>();
+        case kPolicyInterferenceAwareHeterogeneous:
+            return std::make_unique<InterferenceAwareHeterogeneousPolicy>();
         default:
             XASSERT(false, "invalid policy type: %d", type);
             return nullptr;

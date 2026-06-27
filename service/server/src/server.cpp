@@ -7,6 +7,7 @@
 #include "xsched/utils/common.h"
 #include "xsched/protocol/def.h"
 #include "xsched/protocol/names.h"
+#include "xsched/sched/protocol/hint.h"
 #include "xsched/sched/protocol/operation.h"
 
 using namespace xsched::utils;
@@ -518,6 +519,26 @@ void Server::PostHint(const httplib::Request &, httplib::Response &res, const ht
         PID pid = (PID)request["pid"].asInt();
         uint64_t display = request["display"].asUInt64();
         SendHint(std::make_shared<WindowActiveHint>(pid, display));
+        res.set_content("{\"info\": \"success\"}", "application/json");
+        return;
+    }
+    case kHintTypeMemoryIntensity:
+    {
+        auto intensity_val = request["intensity"];
+        if (intensity_val.isNull()) {
+            res.status = httplib::StatusCode::BadRequest_400;
+            res.set_content("{\"error\": \"missing intensity\"}", "application/json");
+            return;
+        }
+        double intensity = intensity_val.asDouble();
+        if (intensity < 0.0 || intensity > 1.0) {
+            res.status = httplib::StatusCode::BadRequest_400;
+            res.set_content("{\"error\": \"intensity must be in [0.0, 1.0]\"}", "application/json");
+            return;
+        }
+
+        XDevice device = request.isMember("device") ? (XDevice)request["device"].asUInt64() : 0;
+        SendHint(std::make_shared<MemoryIntensityHint>(device, intensity));
         res.set_content("{\"info\": \"success\"}", "application/json");
         return;
     }

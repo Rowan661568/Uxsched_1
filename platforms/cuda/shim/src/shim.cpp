@@ -1,4 +1,6 @@
 #include <list>
+#include <string>
+#include <unordered_map>
 
 #include "xsched/xqueue.h"
 #include "xsched/utils/map.h"
@@ -11,6 +13,7 @@
 #include "xsched/cuda/hal/level1/cuda_queue.h"
 #include "xsched/cuda/hal/common/cuda_command.h"
 #include "xsched/cuda/hal/common/memory_manager.h"
+#include "xsched/hint.h"
 
 using namespace xsched::preempt;
 
@@ -18,6 +21,85 @@ namespace xsched::cuda
 {
 
 static utils::ObjectMap<CUevent, std::shared_ptr<CudaEventRecordCommand>> g_events;
+
+// ---------------------------------------------------------------------------
+// IAH kernel intensity auto-detection
+// ---------------------------------------------------------------------------
+// Maps CUfunction handle → kernel name (lazily populated on first launch).
+static std::unordered_map<CUfunction, std::string> g_func_names;
+// Tracks the last intensity sent per device to avoid redundant hint calls.
+static std::unordered_map<XDevice, double> g_device_intensity;
+
+/// Heuristically estimate memory bandwidth intensity from a kernel name.
+/// Returns 0.0 (pure compute) to 1.0 (pure memory-bound).
+static double EstimateKernelIntensity(const std::string &name)
+{
+    // compute-bound patterns
+    if (name.find("conv") != std::string::npos ||
+        name.find("Conv") != std::string::npos ||
+        name.find("gemm") != std::string::npos ||
+        name.find("Gemm") != std::string::npos ||
+        name.find("fft") != std::string::npos ||
+        name.find("FFT") != std::string::npos ||
+        name.find("mma") != std::string::npos ||
+        name.find("warp") != std::string::npos ||
+        name.find("wmma") != std::string::npos)
+        return 0.3;
+
+    // memory-bound patterns
+    if (name.find("copy") != std::string::npos ||
+        name.find("Copy") != std::string::npos ||
+        name.find("memcpy") != std::string::npos ||
+        name.find("Memcpy") != std::string::npos ||
+        name.find("broadcast") != std::string::npos ||
+        name.find("Broadcast") != std::string::npos ||
+        name.find("relu") != std::string::npos ||
+        name.find("Relu") != std::string::npos ||
+        name.find("elementwise") != std::string::npos ||
+        name.find("add_kernel") != std::string::npos ||
+        name.find("mul_kernel") != std::string::npos)
+        return 0.8;
+
+    // embedding / gather / scatter — bandwidth-heavy
+    if (name.find("embed") != std::string::npos ||
+        name.find("Embed") != std::string::npos ||
+        name.find("gather") != std::string::npos ||
+        name.find("Gather") != std::string::npos ||
+        name.find("scatter") != std::string::npos)
+        return 0.9;
+
+    // softmax, layer_norm — moderate bandwidth
+    if (name.find("softmax") != std::string::npos ||
+        name.find("Softmax") != std::string::npos ||
+        name.find("norm") != std::string::npos ||
+        name.find("Norm") != std::string::npos)
+        return 0.6;
+
+    // default: mixed
+    return 0.5;
+}
+
+/// Look up or cache the kernel name for a CUfunction, then check if the
+/// device-level intensity hint should be updated.
+static void UpdateDeviceIntensity(CUfunction f, XDevice device)
+{
+    auto it = g_func_names.find(f);
+    if (it == g_func_names.end()) {
+        const char *name = nullptr;
+        if (Driver::FuncGetName(&name, f) == CUDA_SUCCESS && name != nullptr) {
+            it = g_func_names.emplace(f, std::string(name)).first;
+        } else {
+            return;  // cannot get name, skip
+        }
+    }
+
+    double intensity = EstimateKernelIntensity(it->second);
+    auto dev_it = g_device_intensity.find(device);
+    if (dev_it == g_device_intensity.end() || std::abs(dev_it->second - intensity) > 0.05) {
+        g_device_intensity[device] = intensity;
+        XHintMemoryIntensity(device, intensity);
+    }
+}
 
 void WaitBlockingXQueues()
 {
@@ -86,6 +168,7 @@ CUresult XLaunchKernel(CUfunction f,
         f, gdx, gdy, gdz, bdx, bdy, bdz, shmem, params, extra, xq != nullptr);
 
     if (xq == nullptr) return DirectLaunch(kernel, stream);
+    UpdateDeviceIntensity(f, xq->GetDevice());
     xq->Submit(kernel);
     return CUDA_SUCCESS;
 }
@@ -107,6 +190,7 @@ CUresult XLaunchKernelEx(const CUlaunchConfig *config, CUfunction f, void **para
     auto kn = std::make_shared<CudaKernelLaunchExCommand>(config, f, params, extra, xq != nullptr);
 
     if (xq == nullptr) return DirectLaunch(kn, stream);
+    UpdateDeviceIntensity(f, xq->GetDevice());
     xq->Submit(kn);
     return CUDA_SUCCESS;
 }

@@ -35,6 +35,7 @@ XCLI = ROOT / "output/bin/xcli"
 RESULTS = ROOT / "benchmark_results"
 DEFAULT_REAL_LIBCUDA = "/usr/lib/wsl/lib/libcuda.so.1"
 LAT_RE = re.compile(r"latency_ms:\s*([0-9]+(?:\.[0-9]+)?)")
+BG_ITERS_RE = re.compile(r"__bg_iters__:\s*([0-9]+)")
 
 
 @dataclass
@@ -47,6 +48,7 @@ class ProcSpec:
     log_file: TextIO
     start_elapsed_s: float
     records: list[dict[str, object]] = field(default_factory=list)
+    bg_iters: int = 0
 
 
 def parse_args() -> argparse.Namespace:
@@ -75,6 +77,10 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--threshold", type=int, default=16)
     p.add_argument("--batch-commands", type=int, default=8)
     p.add_argument("--policy", default="HPF")
+    p.add_argument("--slo-factor", type=float, default=0,
+                   help="SLO deadline factor: deadline = factor × baseline p99 latency")
+    p.add_argument("--slo-target-us", type=int, default=0,
+                   help="SLO deadline in microseconds (takes precedence over --slo-factor)")
     p.add_argument("--port", type=int, default=50000)
     p.add_argument("--real-libcuda", default=DEFAULT_REAL_LIBCUDA)
     p.add_argument("--result-dir", type=Path)
@@ -97,7 +103,7 @@ def prepend_path(value: str, prefix: Path) -> str:
     return f"{prefix}:{value}" if value else str(prefix)
 
 
-def child_env(args: argparse.Namespace, scenario: str, priority: int) -> dict[str, str]:
+def child_env(args: argparse.Namespace, scenario: str, priority: int, role: str = "") -> dict[str, str]:
     env = os.environ.copy()
     if not scenario.startswith("xsched"):
         for key in list(env):
@@ -121,6 +127,8 @@ def child_env(args: argparse.Namespace, scenario: str, priority: int) -> dict[st
     env["XSCHED_AUTO_XQUEUE_LEVEL"] = str(level)
     env["XSCHED_AUTO_XQUEUE_THRESHOLD"] = str(args.threshold)
     env["XSCHED_AUTO_XQUEUE_BATCH_SIZE"] = str(args.batch_commands)
+    if role == "foreground" and args.deadline_us > 0:
+        env["XSCHED_AUTO_XQUEUE_DEADLINE"] = str(args.deadline_us)
     return env
 
 
@@ -272,7 +280,7 @@ def launch_worker(args: argparse.Namespace, scenario: str, role: str, priority: 
     proc = subprocess.Popen(
         worker_cmd(args, role, scenario),
         cwd=ROOT,
-        env=child_env(args, scenario, priority),
+        env=child_env(args, scenario, priority, role=role),
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,
@@ -294,6 +302,12 @@ def stream_worker(spec: ProcSpec, t0: float, rows: list[dict[str, object]],
     seq = 0
     for line in spec.proc.stdout:
         spec.log_file.write(line)
+
+        iters_match = BG_ITERS_RE.search(line)
+        if iters_match:
+            spec.bg_iters = int(iters_match.group(1))
+            continue
+
         match = LAT_RE.search(line)
         if not match:
             continue
@@ -332,7 +346,7 @@ def percentile(vals: list[float], pct: float) -> float:
 def summarize_scenario(scenario: str, hp: ProcSpec,
                        backgrounds: list[ProcSpec]) -> dict[str, object]:
     vals = [float(r["latency_ms"]) for r in hp.records]
-    return {
+    summary: dict[str, object] = {
         "scenario": scenario,
         "foreground_samples": len(vals),
         "foreground_batch_size": None,
@@ -347,6 +361,19 @@ def summarize_scenario(scenario: str, hp: ProcSpec,
         "background_pids": [bg.proc.pid for bg in backgrounds],
         "background_returncodes": [bg.proc.returncode for bg in backgrounds],
     }
+
+    # compute background throughput
+    for bg in backgrounds:
+        if bg.bg_iters > 0 and hp.records:
+            bg_end_s = hp.records[-1]["elapsed_s"]
+            bg_duration_s = bg_end_s - bg.start_elapsed_s
+            if bg_duration_s > 0:
+                throughput = bg.bg_iters / bg_duration_s
+                summary[f"background_iters_{bg.index}"] = bg.bg_iters
+                summary[f"background_duration_s_{bg.index}"] = round(bg_duration_s, 3)
+                summary[f"background_throughput_iters_per_s_{bg.index}"] = round(throughput, 2)
+
+    return summary
 
 
 def write_latency_csv(path: Path, rows: list[dict[str, object]]) -> None:
@@ -484,6 +511,7 @@ def foreground_worker(args: argparse.Namespace) -> int:
 
 
 def background_worker(args: argparse.Namespace) -> int:
+    import signal as signal_module
     import torch
     import torchvision
 
@@ -497,17 +525,29 @@ def background_worker(args: argparse.Namespace) -> int:
     data = torch.randn(args.train_batch_size, 3, args.image_size, args.image_size, device=device)
     target = torch.randint(0, 1000, (args.train_batch_size,), device=device)
 
+    step_count = 0
+
+    def report_final(_signum, _frame):
+        print(f"__bg_iters__: {step_count}", flush=True)
+        sys.exit(0)
+
+    signal_module.signal(signal_module.SIGTERM, report_final)
+    signal_module.signal(signal_module.SIGINT, report_final)
+
     def step() -> None:
+        nonlocal step_count
         with torch.cuda.stream(stream):
             opt.zero_grad(set_to_none=True)
             out = model(data)
             loss = loss_fn(out, target)
             loss.backward()
             opt.step()
+        step_count += 1
 
     for _ in range(args.warmup):
         step()
         stream.synchronize()
+    step_count = 0
     while True:
         step()
         stream.synchronize()
@@ -515,6 +555,7 @@ def background_worker(args: argparse.Namespace) -> int:
 
 def main() -> int:
     args = parse_args()
+    args.deadline_us = 0
     if args.worker == "foreground":
         return foreground_worker(args)
     if args.worker == "background":
@@ -534,10 +575,32 @@ def main() -> int:
     (result_dir / "config.json").write_text(json.dumps(config, indent=2) + "\n")
 
     scenarios = ["alone", "native", "xsched", "xsched_lv2"] if args.scenario == "all" else [args.scenario]
+
+    # SLO profiling: capture baseline from "alone" for deadline injection
+    needs_profiling = (args.slo_factor > 0 or args.slo_target_us > 0)
+    if needs_profiling and "alone" not in scenarios:
+        scenarios.insert(0, "alone")
+
     summaries = []
     for scenario in scenarios:
         print(f"\n=== scenario: {scenario} ===", flush=True)
         summaries.append(run_one(args, scenario, result_dir))
+
+        if needs_profiling and scenario == "alone":
+            baseline_p99 = summaries[-1]["latency_p99_ms"]
+            if args.slo_target_us > 0:
+                args.deadline_us = args.slo_target_us
+            else:
+                args.deadline_us = int(baseline_p99 * 1000 * args.slo_factor)
+            msg = (f"\n{'='*60}\n"
+                   f"  SLO profiling complete\n"
+                   f"    baseline p99: {baseline_p99} ms\n"
+                   f"    deadline:     {args.deadline_us} us")
+            if args.slo_factor > 0:
+                msg += f"  ({args.slo_factor}x factor)"
+            msg += f"\n{'='*60}"
+            print(msg)
+
         time.sleep(2.0)
 
     comparison = add_slowdowns(summaries)
@@ -546,12 +609,16 @@ def main() -> int:
     print(f"\nresults: {result_dir}")
     print(f"comparison: {result_dir / 'comparison.json'}")
     for item in comparison:
-        print(
+        parts = [
             f"{item['scenario']}: samples={item['foreground_samples']} "
             f"avg={item['latency_avg_ms']}ms p50={item['latency_p50_ms']}ms "
             f"p95={item['latency_p95_ms']}ms p99={item['latency_p99_ms']}ms "
             f"p99_slowdown={item.get('p99_slowdown_vs_alone')}"
-        )
+        ]
+        for key, val in sorted(item.items()):
+            if key.startswith("background_throughput_"):
+                parts.append(f"bg_thpt={val} it/s")
+        print("  ".join(parts))
     return 0
 
 

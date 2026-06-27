@@ -23,6 +23,7 @@ enum HintType
     kHintTypeKDeadline    = 5,
     kHintTypeLaxity       = 6,
     kHintTypeWindowActive = 7,
+    kHintTypeMemoryIntensity = 8,
     // NEW_POLICY: New HintTypes go here.
 
     kHintTypeMax,
@@ -257,6 +258,40 @@ private:
         HintMeta meta;
         PID      pid;
         uint64_t display;
+    };
+    HintData data_;
+};
+
+class MemoryIntensityHint : public Hint
+{
+public:
+    MemoryIntensityHint(const void *data): data_(*(const HintData *)data) {}
+    /// @brief Create a MemoryIntensityHint to set the memory bandwidth intensity of a device.
+    /// @param device The target device.
+    /// @param intensity Memory bandwidth intensity in [0.0, 1.0].
+    ///        0.0 = compute-bound (no bandwidth pressure),
+    ///        1.0 = memory-bound (max bandwidth pressure).
+    MemoryIntensityHint(XDevice device, double intensity)
+        : data_{
+            .meta { .type = kHintTypeMemoryIntensity },
+            .device = device,
+            .intensity = intensity
+        } {}
+    virtual ~MemoryIntensityHint() = default;
+
+    virtual const void *Data() const override { return &data_; }
+    virtual size_t      Size() const override { return sizeof(data_); }
+    virtual HintType    Type() const override { return kHintTypeMemoryIntensity; }
+
+    XDevice Device()   const { return data_.device; }
+    double  Intensity() const { return data_.intensity; }
+
+private:
+    struct HintData
+    {
+        HintMeta meta;
+        XDevice  device;
+        double   intensity;
     };
     HintData data_;
 };

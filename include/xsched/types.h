@@ -111,6 +111,7 @@ typedef enum {
     kPolicyCompletelyFairScheduler           = 9,
     kPolicyMultiLevelFeedbackQueue           = 10,
     kPolicySLOAdaptive                       = 11,
+    kPolicyInterferenceAwareHeterogeneous    = 12,
 
     kPolicyMax,
 } XPolicyType;

@@ -67,6 +67,7 @@ static const std::map<XPolicyType, std::string> &PolicyNames() {
         { kPolicyCompletelyFairScheduler          , XSCHED_POLICY_NAME_CFS},
         { kPolicyMultiLevelFeedbackQueue          , XSCHED_POLICY_NAME_MLFQ},
         { kPolicySLOAdaptive                      , XSCHED_POLICY_NAME_SLO },
+        { kPolicyInterferenceAwareHeterogeneous   , XSCHED_POLICY_NAME_IAH },
     };
     return kPolicyNames;
 }
